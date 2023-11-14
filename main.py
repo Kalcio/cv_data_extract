@@ -1,61 +1,61 @@
-#!/usr/bin/env python
-# coding: utf-8
-
 import streamlit as st
 import os
-import re
-import csv
-import pandas as pd
-from utils import image_to_text, pdf_to_text, normalize_text ,procesar_cv, extraer_datos_cv
-from dotenv import load_dotenv
-from openai import OpenAI
+import shutil
+from utils import image_to_text, document_to_text, normalize_text ,procesar_cv
 
-# Load environment variables from .env file
-load_dotenv()
+def create_directories():
+    # Crear un directorio temporal para almacenar los archivos subidos
+    if not os.path.exists("temp"):
+        os.makedirs("temp")
 
-# Titulo página
-st.set_page_config(page_title="Extract Data!!!", page_icon=":page_facing_up:", layout="wide")
+    # Crea un directorio para almacener los documentos extraidos
+    if not os.path.exists("output"):
+        os.makedirs("output")
 
-st.title(" :page_facing_up: Extracción de métricas CV")
-st.markdown('<style>div.block-container{padding-top:2rem;}</style>', unsafe_allow_html=True)
-
-# df = pd.read_csv('./cv_datas.csv')
-# st.dataframe(df)
-
-# languages = ['Español', 'Ingles', 'Aleman', 'Frances', 'Chino']
-
-# Crear un directorio temporal para almacenar los archivos
-if not os.path.exists("temp"):
-    os.makedirs("temp")
-
-if not os.path.exists("output"):
-    os.makedirs("output")
-
-# Cargar archivos CV
-uploaded_files = st.file_uploader("Cargar archivos", accept_multiple_files=True)
-
-if uploaded_files is not None:
-  if st.button("Procesar CV"):
+def process_uploaded_files(uploaded_files):
     for uploaded_file in uploaded_files:
-      with open(os.path.join("temp", uploaded_file.name), "wb") as f:
-        f.write(uploaded_file.read())
+        with open(os.path.join("temp", uploaded_file.name), "wb") as f:
+            f.write(uploaded_file.read())
+        print('Transformación a texto del archivo: ', uploaded_file.name)
+        if uploaded_file.name.endswith(('.jpg', '.jpeg', '.png')):
+            # Extrae texto de las imagenes
+            image_to_text("temp", "output")
+            # image_to_text("temp", "output")
+        elif uploaded_file.name.endswith(('.pdf', '.doc', '.docx')):
+            # Extrae texto de los documentos
+            document_to_text("temp", "output")
+        else:
+            # Muestra mensaje de error
+            st.warning(f"El archivo {uploaded_file.name} no es archivo compatible")
 
-      if uploaded_file.name.endswith(('.jpg', '.jpeg', '.png')):
-        # Procesar las imagenes
-        image_to_text("temp", "output")
-      elif uploaded_file.name.endswith('.pdf'):
-        # Procesar PDF
-        pdf_to_text("temp", "output")
-      else:
-        st.warning(f"El archivo {uploaded_file.name} no es archivo compatible")
-      # Eliminar archivo temporal
-      os.remove(os.path.join("temp", uploaded_file.name))
+def main():
+    # Titulo página
+    st.set_page_config(page_title="Extract Data!!!", page_icon=":page_facing_up:", layout="wide")
+    # Titulo principal
+    st.title(" :page_facing_up: Extracción de métricas CV")
+    st.markdown('<style>div.block-container{padding-top:2rem;}</style>', unsafe_allow_html=True)
+    # Campo para cargar archivos
+    uploaded_files = st.file_uploader("Cargar archivos", accept_multiple_files=True)
 
-    # Mostrar mensaje de éxito
-    st.write(f"Archivos procesados con éxito!")
-    
-    normalize_text("output")
-    st.write("Textos normalizados con éxito!")
+    # Verifica si se han subido archivos
+    if uploaded_files is not None and len(uploaded_files)>0:
+        if st.button("Procesar CV"):
+            st.write("Procesando archivos...")
+            process_uploaded_files(uploaded_files)
+            shutil.rmtree("temp")
 
-    # DESCOMENTAAAAR
-    procesar_cv("output")
+            # Mostrar mensaje de éxito
+            st.success(f"Archivos transformados con éxito!")
+            normalize_text("output")
+
+            # Procesa los currículum
+            procesar_cv("output")
+            # Elimina archivos temporales
+            shutil.rmtree("output")
+    else:
+        st.warning("Por favor, carga al menos un archivo.")
+        st.button("Procesar CV",disabled=True)
+
+if __name__ == "__main__":
+    create_directories()
+    main()

@@ -9,6 +9,10 @@ from unicodedata import normalize
 from pdfminer.high_level import extract_text
 from dotenv import load_dotenv
 from openai import OpenAI
+import spacy
+
+# Cargar el modelo de lenguaje de SpaCy con el entity_ruler
+nlp = spacy.load("model_skills")
 
 # Load environment variables from .env file
 load_dotenv()
@@ -90,7 +94,11 @@ def extraer_datos_cv(client, cv_text):
     )
     # Se transforma el texto de respuesta a un diccionario
     datos = json.loads(response.choices[0].message.content)
-    
+
+    doc = nlp(cv_text)
+
+    datos['habilidades_tecnicas'] = [ent.text for ent in doc.ents if ent.label_ == 'SKILLS']
+
     return datos
 
 def guardar_resultados(df):

@@ -1,4 +1,4 @@
 .env
 .Data
 .Data_extract
-.__pycache__
+__pycache__

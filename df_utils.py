@@ -2,31 +2,26 @@ import pandas as pd
 import streamlit as st
 from unidecode import unidecode
 from ast import literal_eval
-from collections import Counter
-import plotly.express as px
+# from collections import Counter
 from wordcloud import WordCloud
-import matplotlib.pyplot as plt
 from io import BytesIO
+import plotly.express as px
+# import matplotlib.pyplot as plt
 
 # Desglosar la lista de idiomas
 def procesar_df(df):
     # Convertir todas las cadenas a minúsculas
     df = df.applymap(lambda x: x.lower() if isinstance(x, str) else x)
-
     # Quitar tildes de la columna 'idiomas_que_habla'
     df['idiomas_que_habla'] = df['idiomas_que_habla'].apply(lambda x: unidecode(x) if isinstance(x, str) else x)
-
     df['nombres'] = df['nombres'].apply(lambda x: x.title())
-
-    # Función para manejar NaN y dividir por coma
-    def process_column(column):
-        return df[column].apply(lambda x: [] if pd.isna(x) else [data.strip() for data in x.split(',')])
 
     # Aplicar la función a las columnas relevantes
     columns_to_process = ['telefono', 'email', 'idiomas_que_habla', 'certificados', 'habilidades_blandas', 'titulo_actual_o_al_egresar', 'universidad_o_instituto', 'anno_de_termino_de_estudios', 'cargo_experiencia_laboral', 'empresa_en_la_que_trabajo', 'nivel_de_idioma', 'url']
+    # Función para manejar NaN y dividir por coma
     for column in columns_to_process:
-        df[column] = process_column(column)
-
+        df[column] = df[column].apply(lambda x: [] if pd.isna(x) else [data.strip() for data in x.split(',')])
+   
     # Convertir la cadena de lista a una lista de Python
     df['habilidades_tecnicas'] = df['habilidades_tecnicas'].apply(lambda x: literal_eval(x) if isinstance(x, str) else x)
 
@@ -39,18 +34,9 @@ def procesar_df(df):
 
     st.dataframe(df)
 
-    # Explotar el DataFrame para cada idioma
-    df_exploded = df.explode('idiomas_que_habla')
-
-    
-
     # Filtrar datos no deseados y NaN
-    df_exploded = df_exploded[
-        (df_exploded['idiomas_que_habla'].astype(str) != 'sin informacion') &
-        (df_exploded['idiomas_que_habla'].astype(str) != 'espanol') &
-        (df_exploded['idiomas_que_habla'].astype(str) != 'chileno') &
-        ~df_exploded['idiomas_que_habla'].isna()
-    ]
+    df_exploded = df.explode('idiomas_que_habla')
+    df_exploded = df_exploded[df_exploded['idiomas_que_habla'].isin(['sin informacion', 'espanol', 'chileno']) & ~df_exploded['idiomas_que_habla'].isna()]
 
     # Convertir todos los valores a cadenas (str)
     df_exploded['idiomas_que_habla'] = df_exploded['idiomas_que_habla'].astype(str)
@@ -68,7 +54,6 @@ def procesar_df(df):
                         labels={'idiomas_que_habla': 'Idioma', 'nombres': 'Candidato'},
                         title='Distribución de Idiomas (Interactivo)',
                         hover_data={'nombres': True, 'idiomas_que_habla': False},
-                        # category_orders={'idiomas_que_habla': sorted(df_exploded['idiomas_que_habla'].unique())},
                         color_discrete_sequence=px.colors.qualitative.Set1)
 
     # Configurar diseño
@@ -111,15 +96,9 @@ def procesar_df(df):
     selected_languages = st.sidebar.multiselect('Selecciona idiomas', df['idiomas_que_habla'].explode().unique())
 
     # Lógica de filtrado
-    if selected_skills or selected_languages:
-        # Filtrar el DataFrame según habilidades o idiomas seleccionados
-        filtered_df = df[
-            ((df['habilidades_tecnicas_unicas'].apply(lambda skills: any(skill in selected_skills for skill in skills)) if selected_skills else False)
-            | (df['idiomas_que_habla'].apply(lambda languages: any(language in selected_languages for language in languages)) if selected_languages else False))
-        ]
-    else:
-        # Si no se selecciona ningún filtro, mostrar todos los datos
-        filtered_df = df
+    skill_filter = df['habilidades_tecnicas_unicas'].apply(lambda skills: any(skill in selected_skills for skill in skills)) if selected_skills else True
+    language_filter = df['idiomas_que_habla'].apply(lambda languages: any(language in selected_languages for language in languages)) if selected_languages else True
+    filtered_df = df[skill_filter | language_filter]
 
     # Seleccionar las columnas deseadas
     selected_columns = ['nombres', 'telefono', 'email', 'titulo_actual_o_al_egresar', 'universidad_o_instituto','habilidades_tecnicas_unicas','habilidades_blandas','idiomas_que_habla','url']

@@ -3,8 +3,7 @@ import os
 import shutil
 import pandas as pd
 from utils import image_to_text, document_to_text, normalize_text ,procesar_cv
-from df_utils import procesar_df
-from df_utils3 import main_utils
+from df_utils import main_utils
 
 def create_directories():
     # Crear un directorio temporal para almacenar los archivos subidos

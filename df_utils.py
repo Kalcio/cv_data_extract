@@ -14,9 +14,6 @@ def procesar_formato_datos(df):
     # Formatear datos nombres a mayúsculas
     df['nombres'] = df['nombres'].apply(lambda x: x.title())
 
-    return df
-
-def procesar_idiomas(df):
     # Quitar tildes de la columna 'idiomas_que_habla'
     df['idiomas_que_habla'] = df['idiomas_que_habla'].apply(lambda x: unidecode(x) if isinstance(x, str) else x)
     return df
@@ -56,13 +53,13 @@ def filtrar_idiomas(df):
     # Obtener todos los idiomas únicos después de la limpieza
     todos_idiomas = sorted(set(idioma for sublist in df['idiomas_que_habla'] for idioma in sublist))
 
-    # Crear un filtro por idioma usando multiselect
-    idiomas_seleccionados = st.multiselect('Selecciona idiomas', todos_idiomas, default=todos_idiomas)
+    # # Crear un filtro por idioma usando multiselect
+    # idiomas_seleccionados = st.multiselect('Selecciona idiomas', todos_idiomas, default=todos_idiomas)
 
     # Filtrar el DataFrame según los idiomas seleccionados
-    df_filtrado = df[df['idiomas_que_habla'].apply(lambda x: any(idioma in x for idioma in idiomas_seleccionados))]
+    # df_filtrado = df[df['idiomas_que_habla'].apply(lambda x: any(idioma in x for idioma in idiomas_seleccionados))]
 
-    return df_filtrado
+    return todos_idiomas
 
 def grafico_idiomas(df_filtrado):
     # Crear el gráfico interactivo
@@ -77,9 +74,8 @@ def grafico_idiomas(df_filtrado):
     # Mostrar el gráfico interactivo en Streamlit
     st.plotly_chart(fig_idiomas)
 
-
 def generar_nube_palabras(df):
-    all_skills = [skill.lower() for sublist in df['habilidades_tecnicas'] for skill in sublist]
+    all_skills = [skill.lower() for sublist in df['habilidades_tecnicas_unicas'] for skill in sublist]
     text = ' '.join(all_skills)
     wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
     img_bytes = BytesIO()
@@ -87,10 +83,24 @@ def generar_nube_palabras(df):
     st.image(img_bytes, caption='Nube de Palabras de Habilidades Técnicas', use_column_width=True)
 
 def obtener_filtros_postulante(df):
+    idiomas_seleccionados = filtrar_idiomas(df)
+
+    # Establecer el ancho deseado para la barra lateral
+    st.markdown(
+        """
+        <style>
+            .sidebar .sidebar-content {
+                width: 250px;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
+    
     # Sidebar con el menú de habilidades
     selected_skills = st.sidebar.multiselect('Selecciona habilidades', df['habilidades_tecnicas'].explode().unique())
     # Sidebar con el menú de idiomas
-    selected_languages = st.sidebar.multiselect('Selecciona idiomas', df['idiomas_que_habla'].explode().unique())
+    selected_languages = st.sidebar.multiselect('Selecciona idiomas', idiomas_seleccionados)
 
     return selected_skills, selected_languages
 
@@ -111,9 +121,9 @@ def aplicar_filtrado(df, selected_skills, selected_languages):
 def reorganizar_dataframe(filtered_df, selected_skills, df):
     # Crear una columna con las habilidades únicas
     filtered_df['habilidades_tecnicas_unicas'] = df['habilidades_tecnicas'].apply(lambda x: list(set(x)))
+    df['habilidades_tecnicas_unicas'] = df['habilidades_tecnicas'].apply(lambda x: list(set(x)))
 
     # selected_columns = ['nombres', 'telefono', 'email', 'titulo_actual_o_al_egresar', 'universidad_o_instituto','habilidades_tecnicas','habilidades_tecnicas_unicas','habilidades_blandas','idiomas_que_habla','url']
-
     # Filtrar y seleccionar solo las columnas deseadas
     # filtered_df = filtered_df[selected_columns]
 
@@ -130,7 +140,7 @@ def reorganizar_dataframe(filtered_df, selected_skills, df):
 
     return df_long
 
-def crear_grafico_radar(df_long):
+def grafico_radar(df_long):
     # Crea el gráfico interactivo de radar con Plotly Express y asigna un color a cada postulante
     fig = px.line_polar(df_long, r='Frecuencia', theta='Habilidad', line_close=True,
                         color='nombres', # Asigna colores según los nombres de los postulantes
@@ -144,6 +154,7 @@ def crear_grafico_radar(df_long):
     st.plotly_chart(fig)
 
 def mostrar_tabla_resultados(filtered_df):
+    columnas_mostrar = ['nombres', 'telefono', 'email', 'titulo_actual_o_al_egresar', 'universidad_o_instituto','habilidades_tecnicas_unicas','habilidades_blandas','idiomas_que_habla','certificados','url']
     # Mostrar la tabla con los resultados
     st.write("Candidatos con habilidades seleccionadas:")
     st.write(filtered_df)
@@ -151,24 +162,19 @@ def mostrar_tabla_resultados(filtered_df):
 # Desglosar la lista de idiomas
 def main_utils(df):
     df = procesar_formato_datos(df)
-    df = procesar_idiomas(df)
     df = procesar_columnas(df)
     df = procesar_habilidades_tecnicas(df)
     
     df = calcular_frecuencia(df)
     st.dataframe(df)
 
-    df_filtrado = filtrar_idiomas(df)
-    grafico_idiomas(df_filtrado)
-    generar_nube_palabras(df_filtrado)
+    grafico_idiomas(df)
 
-    selected_skills, selected_languages = obtener_filtros_postulante(df_filtrado)
-    filtered_df = aplicar_filtrado(df_filtrado, selected_skills, selected_languages)
+    selected_skills, selected_languages = obtener_filtros_postulante(df)
+    filtered_df = aplicar_filtrado(df, selected_skills, selected_languages)
 
-    df_long = reorganizar_dataframe(df_filtrado,selected_skills,df)
-    crear_grafico_radar(df_long)
+    df_long = reorganizar_dataframe(filtered_df,selected_skills,df)
+    generar_nube_palabras(df)
+    grafico_radar(df_long)
 
     mostrar_tabla_resultados(filtered_df)
-
-
-    

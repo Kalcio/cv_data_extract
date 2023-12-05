@@ -6,7 +6,7 @@ from collections import Counter
 from wordcloud import WordCloud
 from io import BytesIO
 import plotly.express as px
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 
 def procesar_formato_datos(df):
     # Convertir todas los datos a minúsculas
@@ -53,22 +53,24 @@ def filtrar_idiomas(df):
     # Obtener todos los idiomas únicos después de la limpieza
     todos_idiomas = sorted(set(idioma for sublist in df['idiomas_que_habla'] for idioma in sublist))
 
-    # # Crear un filtro por idioma usando multiselect
-    # idiomas_seleccionados = st.multiselect('Selecciona idiomas', todos_idiomas, default=todos_idiomas)
-
-    # Filtrar el DataFrame según los idiomas seleccionados
-    # df_filtrado = df[df['idiomas_que_habla'].apply(lambda x: any(idioma in x for idioma in idiomas_seleccionados))]
-
     return todos_idiomas
 
 def grafico_idiomas(df_filtrado):
-    # Crear el gráfico interactivo
-    fig_idiomas = px.bar(df_filtrado, x='idiomas_que_habla', color='nombres',
-                        labels={'idiomas_que_habla': 'Idioma', 'nombres': 'Candidato'},
-                        title='Distribución de Idiomas (Interactivo)',
-                        hover_data={'nombres': True, 'idiomas_que_habla': False},
-                        color_discrete_sequence=px.colors.qualitative.Set1)
+    df_exploded = df_filtrado.explode('idiomas_que_habla')
+    df_exploded = df_exploded[~df_exploded['idiomas_que_habla'].isna()]
+    idiomas_seleccionados = sorted(df_exploded['idiomas_que_habla'].unique())
     
+    # Filtrar el DataFrame según los idiomas seleccionados
+    df_idioma = df_exploded[df_exploded['idiomas_que_habla'].isin(idiomas_seleccionados)]
+
+    # Crear el gráfico interactivo
+    fig_idiomas = px.bar(df_idioma, x='idiomas_que_habla', color='nombres',
+                        labels={'idiomas_que_habla': 'Idioma', 'nombres': 'Candidato', 'count': 'Cantidad'},
+                        title='Distribución de Idiomas',
+                        hover_data={'nombres': True, 'idiomas_que_habla': False},
+                        # category_orders={'idiomas_que_habla': sorted(df_exploded['idiomas_que_habla'].unique())},
+                        color_discrete_sequence=px.colors.qualitative.Set1)
+
     # Configurar diseño
     fig_idiomas.update_layout(barmode='stack')
     # Mostrar el gráfico interactivo en Streamlit
@@ -77,10 +79,10 @@ def grafico_idiomas(df_filtrado):
 def generar_nube_palabras(df):
     all_skills = [skill.lower() for sublist in df['habilidades_tecnicas_unicas'] for skill in sublist]
     text = ' '.join(all_skills)
-    wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
+    wordcloud = WordCloud(width=400, height=200, background_color='white').generate(text)
     img_bytes = BytesIO()
     wordcloud.to_image().save(img_bytes, format='PNG')
-    st.image(img_bytes, caption='Nube de Palabras de Habilidades Técnicas', use_column_width=True)
+    st.image(img_bytes, caption='Nube de palabras de habilidades técnicas de los postulantes')
 
 def obtener_filtros_postulante(df):
     idiomas_seleccionados = filtrar_idiomas(df)
@@ -98,7 +100,7 @@ def obtener_filtros_postulante(df):
     )
     
     # Sidebar con el menú de habilidades
-    selected_skills = st.sidebar.multiselect('Selecciona habilidades', df['habilidades_tecnicas'].explode().unique())
+    selected_skills = st.sidebar.multiselect('Selecciona habilidades técnicas', df['habilidades_tecnicas'].explode().unique())
     # Sidebar con el menú de idiomas
     selected_languages = st.sidebar.multiselect('Selecciona idiomas', idiomas_seleccionados)
 
@@ -123,10 +125,6 @@ def reorganizar_dataframe(filtered_df, selected_skills, df):
     filtered_df['habilidades_tecnicas_unicas'] = df['habilidades_tecnicas'].apply(lambda x: list(set(x)))
     df['habilidades_tecnicas_unicas'] = df['habilidades_tecnicas'].apply(lambda x: list(set(x)))
 
-    # selected_columns = ['nombres', 'telefono', 'email', 'titulo_actual_o_al_egresar', 'universidad_o_instituto','habilidades_tecnicas','habilidades_tecnicas_unicas','habilidades_blandas','idiomas_que_habla','url']
-    # Filtrar y seleccionar solo las columnas deseadas
-    # filtered_df = filtered_df[selected_columns]
-
     # Cuenta la frecuencia de cada habilidad para cada postulante
     for habilidad in selected_skills:
         filtered_df[habilidad] = df['habilidades_tecnicas'].apply(lambda x: Counter(x)[habilidad] if isinstance(x, list) else 0)
@@ -150,15 +148,28 @@ def grafico_radar(df_long):
 
     fig.update_traces(fill='toself')
 
+    # Configura el formato del eje radial como enteros
+    fig.update_layout(polar=dict(radialaxis=dict(tickmode='linear', tickformat='d')))
+
     # Muestra el gráfico
+    st.plotly_chart(fig)
+
+def grafico_certificados(df):
+    # Gráfico de barras con Plotly Express
+    fig = px.bar(df, x='nombres', y='cantidad_certificados', color='nombres', labels={'Certificados': 'cantidad_certificados'})
+    fig.update_layout(title='Gráfico de Barras de Certificados de Postulantes')
+
+    # Mostrar el gráfico en Streamlit
     st.plotly_chart(fig)
 
 def mostrar_tabla_resultados(filtered_df):
     columnas_mostrar = ['nombres', 'telefono', 'email', 'titulo_actual_o_al_egresar', 'universidad_o_instituto','habilidades_tecnicas_unicas','habilidades_blandas','idiomas_que_habla','certificados','url']
     # Mostrar la tabla con los resultados
-    st.write("Candidatos con habilidades seleccionadas:")
-    st.write(filtered_df)
+    print_df = filtered_df[columnas_mostrar].rename(columns={'nombres': 'Nombres', 'telefono': 'Teléfono', 'email': 'Email', 'titulo_actual_o_al_egresar': 'Título','universidad_o_instituto': 'Universidad o Instituto', 'habilidades_tecnicas_unicas': 'Habilidades Técnicas', 'habilidades_blandas': 'Habilidades blandas', 'idiomas_que_habla': 'Idiomas','certificados': 'Certificados','url':'URL'})
 
+    st.write("Candidatos con habilidades seleccionadas:")
+    st.write(print_df)
+    
 # Desglosar la lista de idiomas
 def main_utils(df):
     df = procesar_formato_datos(df)
@@ -168,13 +179,20 @@ def main_utils(df):
     df = calcular_frecuencia(df)
     st.dataframe(df)
 
-    grafico_idiomas(df)
 
     selected_skills, selected_languages = obtener_filtros_postulante(df)
     filtered_df = aplicar_filtrado(df, selected_skills, selected_languages)
 
     df_long = reorganizar_dataframe(filtered_df,selected_skills,df)
-    generar_nube_palabras(df)
-    grafico_radar(df_long)
+
+    grafico_idiomas(filtered_df)
+
+    # Agrega una condición para mostrar el gráfico de radar solo cuando se seleccionan 3 habilidades
+    if len(selected_skills) >= 3:
+        grafico_radar(df_long)
+    else:
+        st.warning("Selecciona más 3 habilidades técnicas para mostrar el gráfico de radar.")
+    grafico_certificados(filtered_df)
+    generar_nube_palabras(filtered_df)
 
     mostrar_tabla_resultados(filtered_df)

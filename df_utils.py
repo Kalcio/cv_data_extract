@@ -8,6 +8,7 @@ from io import BytesIO
 import plotly.express as px
 import matplotlib.pyplot as plt
 import spacy
+import re
 
 def procesar_formato_datos(df):
     # Convertir todas los datos a minúsculas
@@ -70,63 +71,6 @@ def filtrar_idiomas(df):
 
     return todos_idiomas
 
-def grafico_idiomas(df_filtrado):
-    df_exploded = df_filtrado.explode('idiomas_que_habla')
-    df_exploded = df_exploded[~df_exploded['idiomas_que_habla'].isna()]
-    idiomas_seleccionados = sorted(df_exploded['idiomas_que_habla'].unique())
-    
-    # Filtrar el DataFrame según los idiomas seleccionados
-    df_idioma = df_exploded[df_exploded['idiomas_que_habla'].isin(idiomas_seleccionados)]
-
-    # Crear el gráfico interactivo
-    fig_idiomas = px.bar(df_idioma, x='idiomas_que_habla', color='nombres',
-                        labels={'idiomas_que_habla': 'Idioma', 'nombres': 'Candidato', 'count': 'Cantidad'},
-                        title='Distribución de Idiomas',
-                        hover_data={'nombres': True, 'idiomas_que_habla': False},
-                        # category_orders={'idiomas_que_habla': sorted(df_exploded['idiomas_que_habla'].unique())},
-                        color_discrete_sequence=px.colors.qualitative.Set1)
-
-    # Configurar diseño
-    fig_idiomas.update_layout(barmode='stack', width=600)
-    # Mostrar el gráfico interactivo en Streamlit
-    st.plotly_chart(fig_idiomas)
-
-def grafico_certificados(df_filtrado, habilidades_seleccionadas):
-    df_exploded = df_filtrado.explode('habilidades_certificados')
-    df_exploded = df_exploded[~df_exploded['habilidades_certificados'].isna()]
-    df_exploded = df_exploded[df_exploded['habilidades_certificados'] != 'certificate']    # Filtrar el DataFrame según las habilidades seleccionadas
-    
-    if habilidades_seleccionadas:
-        df_certificados = df_exploded[df_exploded['habilidades_certificados'].isin(habilidades_seleccionadas)]
-    else:
-        df_certificados = df_exploded
-    # Crear el gráfico interactivo solo si hay datos después de aplicar el filtro
-    if not df_certificados.empty:
-        # Obtener la frecuencia de cada valor único
-        frecuencia_valores_grupo = df_exploded.groupby(['nombres', 'habilidades_certificados']).size().reset_index(name='Cantidad')
-
-        # Crear el gráfico interactivo
-        fig_certificados = px.bar(frecuencia_valores_grupo, x='habilidades_certificados', y='Cantidad', color='nombres',
-                                  labels={'habilidades_certificados': 'Habilidades', 'nombres': 'Candidato', 'count': 'Cantidad'},
-                                  title=f'Distribución de certificaciones para las habilidades seleccionadas',
-                                  hover_data={'nombres': True, 'habilidades_certificados': False},
-                                  color_discrete_sequence=px.colors.qualitative.Set1)
-
-        # Configurar diseño
-        fig_certificados.update_layout(barmode='stack', width=600,yaxis=dict(tickmode='linear', tickformat='d'))
-        # Mostrar el gráfico interactivo en Streamlit
-        st.plotly_chart(fig_certificados)
-    else:
-        st.warning("No hay datos para las habilidades seleccionadas")
-
-def generar_nube_palabras(df):
-    all_skills = [skill.lower() for sublist in df['habilidades_tecnicas_unicas'] for skill in sublist]
-    text = ' '.join(all_skills)
-    wordcloud = WordCloud(width=600, height=400, background_color='white').generate(text)
-    img_bytes = BytesIO()
-    wordcloud.to_image().save(img_bytes, format='PNG')
-    st.image(img_bytes, caption='Nube de palabras de habilidades técnicas de los postulantes')
-
 def obtener_filtros_postulante(df):
     idiomas_seleccionados = filtrar_idiomas(df)
 
@@ -181,7 +125,73 @@ def reorganizar_dataframe(filtered_df, selected_skills, df):
 
     return df_long
 
-def grafico_radar(df_long):
+def extraer_anno_egreso(texto):
+    anos = re.findall(r'\b\d{4}\b', str(texto))
+    anos = [int(ano) for ano in anos]  # Convertir a enteros
+    return max(anos, default=None)
+
+# Función para contar la cantidad de elementos en una lista
+def contar_elementos(lista):
+    return len(lista)
+
+def grafico_idiomas(df_filtrado):
+    df_exploded = df_filtrado.explode('idiomas_que_habla')
+    df_exploded = df_exploded[~df_exploded['idiomas_que_habla'].isna()]
+    idiomas_seleccionados = sorted(df_exploded['idiomas_que_habla'].unique())
+    
+    # Filtrar el DataFrame según los idiomas seleccionados
+    df_idioma = df_exploded[df_exploded['idiomas_que_habla'].isin(idiomas_seleccionados)]
+
+    # Crear el gráfico interactivo
+    fig_idiomas = px.bar(df_idioma, x='idiomas_que_habla', color='nombres',
+                        labels={'idiomas_que_habla': 'Idioma', 'nombres': 'Candidato', 'count': 'Cantidad'},
+                        title='Distribución de Idiomas',
+                        hover_data={'nombres': True, 'idiomas_que_habla': False},
+                        # category_orders={'idiomas_que_habla': sorted(df_exploded['idiomas_que_habla'].unique())},
+                        color_discrete_sequence=px.colors.qualitative.Set1)
+
+    # Configurar diseño
+    fig_idiomas.update_layout(barmode='stack', width=600)
+    # Mostrar el gráfico interactivo en Streamlit
+    st.plotly_chart(fig_idiomas)
+
+def generar_nube_palabras(df_filtrado):
+    all_skills = [skill.lower() for sublist in df_filtrado['habilidades_tecnicas_unicas'] for skill in sublist]
+    text = ' '.join(all_skills)
+    wordcloud = WordCloud(width=600, height=400, background_color='white').generate(text)
+    img_bytes = BytesIO()
+    wordcloud.to_image().save(img_bytes, format='PNG')
+    st.image(img_bytes, caption='Nube de palabras de habilidades técnicas de los postulantes')
+
+def grafico_certificados(df_filtrado, habilidades_seleccionadas):
+    df_exploded = df_filtrado.explode('habilidades_certificados')
+    df_exploded = df_exploded[~df_exploded['habilidades_certificados'].isna()]
+    df_exploded = df_exploded[df_exploded['habilidades_certificados'] != 'certificate']    # Filtrar el DataFrame según las habilidades seleccionadas
+    
+    if habilidades_seleccionadas:
+        df_certificados = df_exploded[df_exploded['habilidades_certificados'].isin(habilidades_seleccionadas)]
+    else:
+        df_certificados = df_exploded
+    # Crear el gráfico interactivo solo si hay datos después de aplicar el filtro
+    if not df_certificados.empty:
+        # Obtener la frecuencia de cada valor único
+        frecuencia_valores_grupo = df_exploded.groupby(['nombres', 'habilidades_certificados']).size().reset_index(name='Cantidad')
+
+        # Crear el gráfico interactivo
+        fig_certificados = px.bar(frecuencia_valores_grupo, x='habilidades_certificados', y='Cantidad', color='nombres',
+                                  labels={'habilidades_certificados': 'Habilidades', 'nombres': 'Candidato', 'count': 'Cantidad'},
+                                  title=f'Distribución de certificaciones para las habilidades seleccionadas',
+                                  hover_data={'nombres': True, 'habilidades_certificados': False},
+                                  color_discrete_sequence=px.colors.qualitative.Set1)
+
+        # Configurar diseño
+        fig_certificados.update_layout(barmode='stack', width=600,yaxis=dict(tickmode='linear', tickformat='d'))
+        # Mostrar el gráfico interactivo en Streamlit
+        st.plotly_chart(fig_certificados)
+    else:
+        st.warning("No hay datos para las habilidades seleccionadas")
+
+def grafico_radar_skills(df_long):
     # Crea el gráfico interactivo de radar con Plotly Express y asigna un color a cada postulante
     fig = px.line_polar(df_long, r='Frecuencia', theta='Habilidad', line_close=True,
                         range_r=[0, df_long['Frecuencia'].max()],
@@ -204,40 +214,39 @@ def grafico_radar(df_long):
     # Muestra el gráfico
     st.plotly_chart(fig)
 
-def grafico_certificados2(df):
-    # Gráfico de barras con Plotly Express
-    fig = px.bar(df, x='nombres', y='cantidad_certificados', color='nombres', labels={'Certificados': 'cantidad_certificados'})
-    fig.update_layout(title='Gráfico de Barras de Certificados de Postulantes')
+def grafico_experiencia(df):
+    # Ordenar el DataFrame por la cantidad de experiencia en orden descendente
+    df = df.sort_values(by='cantidad_experiencia', ascending=False)
 
-    # Mostrar el gráfico en Streamlit
+    fig = px.bar(df, x='cantidad_experiencia', y='nombres', orientation='h', text='cantidad_experiencia',
+                color='nombres',width=800, height=600, # Especificar la columna para determinar el color
+                labels={'cantidad_experiencia': 'Cantidad de Experiencia Laboral', 'nombres': 'Candidatos'},
+                title='Experiencia Laboral de Empleados')
+    # Configurar diseño
+    fig.update_layout(barmode='stack', width=600)
+    # Mostrar el gráfico
     st.plotly_chart(fig)
 
-
-def mostrar_tabla_resultados(filtered_df):
+def mostrar_tabla_resultados(df_filtrado):
     columnas_mostrar = ['nombres', 'telefono', 'email', 'titulo_actual_o_al_egresar', 'universidad_o_instituto','habilidades_tecnicas_unicas','habilidades_blandas','idiomas_que_habla','certificados','url']
     # Mostrar la tabla con los resultados
-    print_df = filtered_df[columnas_mostrar].rename(columns={'nombres': 'Nombres', 'telefono': 'Teléfono', 'email': 'Email', 'titulo_actual_o_al_egresar': 'Título','universidad_o_instituto': 'Universidad o Instituto', 'habilidades_tecnicas_unicas': 'Habilidades Técnicas', 'habilidades_blandas': 'Habilidades blandas', 'idiomas_que_habla': 'Idiomas','certificados': 'Certificados','url':'URL'})
+    print_df = df_filtrado[columnas_mostrar].rename(columns={'nombres': 'Nombres', 'telefono': 'Teléfono', 'email': 'Email', 'titulo_actual_o_al_egresar': 'Título','universidad_o_instituto': 'Universidad o Instituto', 'habilidades_tecnicas_unicas': 'Habilidades Técnicas', 'habilidades_blandas': 'Habilidades blandas', 'idiomas_que_habla': 'Idiomas','certificados': 'Certificados','url':'URL'})
 
     st.write("Candidatos con habilidades seleccionadas:")
     st.write(print_df)
-    
 
 # Desglosar la lista de idiomas
 def main_utils(df):
-    # Establecer el fondo celeste con HTML y CSS
-    st.markdown(
-        """
-        <style>
-            body {
-                background-color: #87CEFA;  /* Utiliza el código de color celeste que prefieras */
-            }
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
     df = procesar_formato_datos(df)
     df = procesar_columnas(df)
     df = procesar_habilidades_tecnicas(df)
+    # Aplicar la función a la columna del DataFrame
+    df['solo_annos'] = df['anno_de_termino_de_estudios'].apply(extraer_anno_egreso)
+    annos = ['nombres','anno_de_termino_de_estudios','solo_annos']
+    # Reemplazar valores vacíos con NaN
+    df['solo_annos'].replace('', pd.NA, inplace=True)
+    # Aplicar la función a la columna 'experiencia_laboral'
+    df['cantidad_experiencia'] = df['cargo_experiencia_laboral'].apply(contar_elementos)
     
     df = calcular_frecuencia(df)
     st.dataframe(df)
@@ -251,13 +260,14 @@ def main_utils(df):
     with col1:
         grafico_idiomas(filtered_df)
         grafico_certificados(filtered_df,selected_skills)
+        grafico_experiencia(filtered_df)
 
     with col2:
         # Agrega una condición para mostrar el gráfico de radar solo cuando se seleccionan 3 habilidades
         generar_nube_palabras(filtered_df)
         
         if len(selected_skills) >= 3:
-            grafico_radar(df_long)
+            grafico_radar_skills(df_long)
         else:
             st.warning("Selecciona más 3 habilidades técnicas para mostrar el gráfico de radar.")
             st.empty()

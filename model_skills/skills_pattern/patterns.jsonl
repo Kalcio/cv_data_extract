@@ -270,8 +270,6 @@
 {"label":"SKILLS","pattern":[{"LOWER":"centos"}]}
 {"label":"SKILLS","pattern":[{"LOWER":"central"},{"LOWER":"processing"},{"LOWER":"unit"}]}
 {"label":"SKILLS","pattern":[{"LOWER":"cepstrum"}]}
-{"label":"SKILLS","pattern":[{"LOWER":"certificate"}]}
-{"label":"SKILLS","pattern":[{"LOWER":"certificate"},{"LOWER":"authority"}]}
 {"label":"SKILLS","pattern":[{"LOWER":"change"},{"LOWER":"detection"}]}
 {"label":"SKILLS","pattern":[{"LOWER":"chartbeat"}]}
 {"label":"SKILLS","pattern":[{"LOWER":"charting"},{"LOWER":"libraries"}]}

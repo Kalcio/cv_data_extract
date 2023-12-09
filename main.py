@@ -2,8 +2,11 @@ import streamlit as st
 import os
 import shutil
 import pandas as pd
-from utils import image_to_text, document_to_text, normalize_text ,procesar_cv
-from df_utils import main_utils
+from utils import image_to_text, document_to_text, normalize_text, procesar_cv
+from df_utils import procesar_df
+
+
+result_file_path = "export/cv_datas.csv"
 
 def create_directories():
     # Crear un directorio temporal para almacenar los archivos subidos
@@ -35,34 +38,36 @@ def main():
     st.set_page_config(page_title="Extract Data!!!", page_icon=":page_facing_up:", layout="wide")
     # Titulo principal
     st.title(" :page_facing_up: Extracción de métricas CV")
-    st.markdown('<style>div.block-container{padding-top:2rem;}</style>', unsafe_allow_html=True)
+    st.markdown('<style>body{background-color: #87CEFA;} div.block-container{padding-top:2rem;}</style>', unsafe_allow_html=True)
     # Campo para cargar archivos
     uploaded_files = st.file_uploader("Cargar archivos", accept_multiple_files=True)
 
-    # # Verifica si se han subido archivos
-    # if uploaded_files is not None and len(uploaded_files)>0:
-    #     if st.button("Procesar CV"):
-    #         st.write("Procesando archivos...")
-    #         process_uploaded_files(uploaded_files)
-    #         shutil.rmtree("temp")
+    if not os.path.exists(result_file_path):
+        # Verifica si se han subido archivos
+        if uploaded_files is not None and len(uploaded_files)>0:
+            if st.button("Procesar CV"):
+                st.write("Procesando archivos...")
+                process_uploaded_files(uploaded_files)
+                shutil.rmtree("temp")
 
-    #         # Mostrar mensaje de éxito
-    #         st.success(f"Archivos transformados con éxito!")
-    #         normalize_text("output")
+                # Mostrar mensaje de éxito
+                st.success(f"Archivos transformados con éxito!")
+                normalize_text("output")
 
-    #         # Procesa los currículum
-    #         procesar_cv("output")
-    #         # Elimina archivos temporales
-    #         # shutil.rmtree("output")
+                # Procesa los currículum
+                procesar_cv("output")
+                # Elimina archivos temporales
+                shutil.rmtree("output")
+        else:
+            st.warning("Por favor, carga al menos un archivo.")
+            st.button("Procesar CV",disabled=True)
+    else:
+        df = pd.read_csv(result_file_path)
+        procesar_df(df)
 
-    # else:
-    #     st.warning("Por favor, carga al menos un archivo.")
-    #     st.button("Procesar CV",disabled=True)
-    # open a dataframe in csv with pandas
-    df = pd.read_csv('./cv_data.csv')
-    main_utils(df)
-    # procesar_df(df)
-
+        # df = pd.read_csv('./cv_data.csv')
+        # procesar_df(df)
+    
 
 if __name__ == "__main__":
     create_directories()

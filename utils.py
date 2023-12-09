@@ -10,6 +10,7 @@ from pdfminer.high_level import extract_text
 from dotenv import load_dotenv
 from openai import OpenAI
 import spacy
+from df_utils import procesar_df
 
 # Cargar el modelo de lenguaje de SpaCy con el entity_ruler
 nlp = spacy.load("model_skills")
@@ -87,7 +88,7 @@ def extraer_datos_cv(client, cv_text):
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
-          {"role": "user", "content": f"Necesito que extraigas del texto los siguientes datos y me los entregues en formato diccionario python: nombres, telefono, email, direccion, titulo_actual_o_al_egresar, universidad_o_instituto, anno_de_termino_de_estudios, habilidades_tecnicas, habilidades_blandas, cargo_experiencia_laboral, empresa_en_la_que_trabajo, certificados, idiomas_que_habla, nivel_de_idioma, URL. Si no tiene alguno de estos dejarlo vacío, si hay más de un dato separarlo por coma. Texto: {cv_text}"}
+          {"role": "user", "content": f"Necesito que extraigas del texto los siguientes datos y me los entregues en formato diccionario python: nombres, telefono, email, direccion, titulo_actual_o_al_egresar, universidad_o_instituto, anno_de_termino_de_estudios, habilidades_blandas, cargo_experiencia_laboral, empresa_en_la_que_trabajo, certificados, idiomas_que_habla, nivel_de_idioma, URL. Si no tiene alguno de estos dejarlo vacío, si hay más de un dato separarlo por coma. Texto: {cv_text}"}
         ],
         temperature=0.2,
         max_tokens=800
@@ -97,6 +98,7 @@ def extraer_datos_cv(client, cv_text):
 
     doc = nlp(cv_text)
 
+    # datos = {}
     datos['habilidades_tecnicas'] = [ent.text for ent in doc.ents if ent.label_ == 'SKILLS']
 
     return datos
@@ -134,5 +136,4 @@ def procesar_cv(folder_data):
 
     df = pd.DataFrame(resultados)
     guardar_resultados(df)
-
-    st.dataframe(df)
+    procesar_df(df)

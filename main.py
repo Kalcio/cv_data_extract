@@ -48,7 +48,7 @@ def main():
             if st.button("Procesar CV"):
                 st.write("Procesando archivos...")
                 process_uploaded_files(uploaded_files)
-                shutil.rmtree("temp")
+                # shutil.rmtree("temp")
 
                 # Mostrar mensaje de éxito
                 st.success(f"Archivos transformados con éxito!")

@@ -41,12 +41,13 @@ def extraer_habilidades_certificados(certificaciones):
                 habilidades_certificados.append(ent.text)
     return habilidades_certificados
 
+
 def procesar_columnas(df):
     # Columnas a enlistar
-    columns_to_process = ['telefono', 'email', 'idiomas_que_habla', 'certificados', 'habilidades_blandas', 'titulo_actual_o_al_egresar', 'universidad_o_instituto', 'anno_de_termino_de_estudios', 'cargo_experiencia_laboral', 'empresa_en_la_que_trabajo', 'nivel_de_idioma', 'url']
+    columns_to_process = ['telefono', 'email', 'idiomas_que_habla', 'certificados', 'habilidades_blandas', 'titulo_actual_o_al_egresar', 'universidad_o_instituto', 'anno_de_termino_de_estudios', 'cargo_experiencia_laboral', 'empresa_en_la_que_trabajo', 'nivel_de_idioma', 'URL']
     # Función para manejar NaN y enlistar
     for column in columns_to_process:
-        df[column] = df[column].apply(lambda x: [] if pd.isna(x) else [data.strip() for data in x.split(',')])
+        df[column] = df[column].apply(lambda x: [] if pd.isna(x) else [data.strip() for data in x.split(',')] if isinstance(x, str) else [])
 
     df['habilidades_certificados'] = df['certificados'].apply(extraer_habilidades_certificados)
     return df
@@ -242,15 +243,15 @@ def grafico_experiencia(df):
     st.plotly_chart(fig)
 
 def mostrar_tabla_resultados(df_filtrado):
-    columnas_mostrar = ['nombres', 'telefono', 'email', 'titulo_actual_o_al_egresar', 'universidad_o_instituto','habilidades_tecnicas_unicas','habilidades_blandas','idiomas_que_habla','certificados','url']
+    columnas_mostrar = ['nombres', 'telefono', 'email', 'titulo_actual_o_al_egresar', 'universidad_o_instituto','habilidades_tecnicas_unicas','habilidades_blandas','idiomas_que_habla','certificados','URL']
     # Mostrar la tabla con los resultados
-    print_df = df_filtrado[columnas_mostrar].rename(columns={'nombres': 'Nombres', 'telefono': 'Teléfono', 'email': 'Email', 'titulo_actual_o_al_egresar': 'Título','universidad_o_instituto': 'Universidad o Instituto', 'habilidades_tecnicas_unicas': 'Habilidades Técnicas', 'habilidades_blandas': 'Habilidades blandas', 'idiomas_que_habla': 'Idiomas','certificados': 'Certificados','url':'URL'})
+    print_df = df_filtrado[columnas_mostrar].rename(columns={'nombres': 'Nombres', 'telefono': 'Teléfono', 'email': 'Email', 'titulo_actual_o_al_egresar': 'Título','universidad_o_instituto': 'Universidad o Instituto', 'habilidades_tecnicas_unicas': 'Habilidades Técnicas', 'habilidades_blandas': 'Habilidades blandas', 'idiomas_que_habla': 'Idiomas','certificados': 'Certificados','URL':'URL'})
 
     st.write("Candidatos con habilidades seleccionadas:")
     st.write(print_df)
 
 # Desglosar la lista de idiomas
-def main_utils(df):
+def procesar_df(df):
     df = procesar_formato_datos(df)
     df = procesar_columnas(df)
     df = procesar_habilidades_tecnicas(df)
@@ -288,7 +289,5 @@ def main_utils(df):
                 grafico_radar_skills(df_long)
             else:
                 st.warning("Selecciona más 3 habilidades técnicas para mostrar el gráfico de radar.")
-
-        
 
     mostrar_tabla_resultados(filtered_df)

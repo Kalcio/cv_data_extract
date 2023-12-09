@@ -19,6 +19,14 @@ def procesar_formato_datos(df):
     # Quitar tildes de la columna 'idiomas_que_habla'
     df['idiomas_que_habla'] = df['idiomas_que_habla'].apply(lambda x: unidecode(x) if isinstance(x, str) else x)
     
+    # Aplicar title() a la columna 'empresa_en_la_que_trabajo' y manejar valores nulos
+    df['universidad_o_instituto'] = df['universidad_o_instituto'].apply(lambda x: x.title() if pd.notna(x) else x)
+
+    df['titulo_actual_o_al_egresar'] = df['titulo_actual_o_al_egresar'].apply(lambda x: x.title() if pd.notna(x) else x)
+
+    # Aplicar title() a la columna 'empresa_en_la_que_trabajo' y manejar valores nulos
+    df['empresa_en_la_que_trabajo'] = df['empresa_en_la_que_trabajo'].apply(lambda x: x.title() if pd.notna(x) else x)
+
     return df
 
 def extraer_habilidades_certificados(certificaciones):
@@ -85,9 +93,15 @@ def obtener_filtros_postulante(df):
         """,
         unsafe_allow_html=True
     )
+
+    st.sidebar.title('Filtrado de candidatos')
     
+    unique_skills = df['habilidades_tecnicas'].explode().unique()
+    non_nan_skills = [skill for skill in unique_skills if pd.notna(skill)]
+    sorted_skills = sorted(non_nan_skills)
+
     # Sidebar con el menú de habilidades
-    selected_skills = st.sidebar.multiselect('Selecciona habilidades técnicas', df['habilidades_tecnicas'].explode().unique())
+    selected_skills = st.sidebar.multiselect('Selecciona habilidades técnicas', sorted_skills)
     # Sidebar con el menú de idiomas
     selected_languages = st.sidebar.multiselect('Selecciona idiomas', idiomas_seleccionados)
 
@@ -180,7 +194,7 @@ def grafico_certificados(df_filtrado, habilidades_seleccionadas):
         # Crear el gráfico interactivo
         fig_certificados = px.bar(frecuencia_valores_grupo, x='habilidades_certificados', y='Cantidad', color='nombres',
                                   labels={'habilidades_certificados': 'Habilidades', 'nombres': 'Candidato', 'count': 'Cantidad'},
-                                  title=f'Distribución de certificaciones para las habilidades seleccionadas',
+                                  title=f'Distribución de certificaciones para las habilidades técnicas',
                                   hover_data={'nombres': True, 'habilidades_certificados': False},
                                   color_discrete_sequence=px.colors.qualitative.Set1)
 
@@ -258,19 +272,22 @@ def main_utils(df):
     df_long = reorganizar_dataframe(filtered_df,selected_skills,df)
 
     with col1:
-        grafico_idiomas(filtered_df)
-        grafico_certificados(filtered_df,selected_skills)
-        grafico_experiencia(filtered_df)
+        with st.container():
+            grafico_idiomas(filtered_df)
+        with st.container():
+            grafico_certificados(filtered_df,selected_skills)
+        with st.container():
+            grafico_experiencia(filtered_df)
 
     with col2:
-        # Agrega una condición para mostrar el gráfico de radar solo cuando se seleccionan 3 habilidades
-        generar_nube_palabras(filtered_df)
-        
-        if len(selected_skills) >= 3:
-            grafico_radar_skills(df_long)
-        else:
-            st.warning("Selecciona más 3 habilidades técnicas para mostrar el gráfico de radar.")
-            st.empty()
+        with st.container():
+            # Agrega una condición para mostrar el gráfico de radar solo cuando se seleccionan 3 habilidades
+            generar_nube_palabras(filtered_df)
+        with st.container():
+            if len(selected_skills) >= 3:
+                grafico_radar_skills(df_long)
+            else:
+                st.warning("Selecciona más 3 habilidades técnicas para mostrar el gráfico de radar.")
 
         
 

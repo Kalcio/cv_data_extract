@@ -5,7 +5,6 @@ import pandas as pd
 from utils import image_to_text, document_to_text, normalize_text, procesar_cv
 from df_utils import procesar_df
 
-
 result_file_path = "export/cv_datas.csv"
 
 def create_directories():

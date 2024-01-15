@@ -116,6 +116,7 @@ def guardar_resultados(df):
 # Función para procesar los currículums
 def procesar_cv(folder_data):
     client = OpenAI()
+    os.environ.get("OPENAI_API_KEY")
 
     print("Inicio procesamiento CV")
     st.write("Procesando CV...")

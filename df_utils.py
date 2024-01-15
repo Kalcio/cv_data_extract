@@ -12,9 +12,10 @@ import plotly.express as px
 import matplotlib.pyplot as plt
 import spacy
 import re
-# Descargar las palabras vacías en español
+import os
 import nltk
 
+result_file_path = "export/cv_datas.csv"
 nltk.download('stopwords')
 nltk.download('wordnet')
 
@@ -284,6 +285,14 @@ def mostrar_tabla_resultados(df_filtrado):
     st.write("Candidatos con habilidades seleccionadas:")
     st.write(print_df)
 
+def borrar_resultados():
+    if os.path.exists(result_file_path):
+        try:
+            os.remove(result_file_path)
+            st.experimental_rerun()
+        except Exception as e:
+            st.error(f"No se pudo borrar el archivo {result_file_path}. Error {e}")
+
 # Desglosar la lista de idiomas
 def procesar_df(df):
     df = procesar_formato_datos(df)
@@ -327,3 +336,10 @@ def procesar_df(df):
             extraer_habilidades_blandas(df)
 
     mostrar_tabla_resultados(filtered_df)
+
+    st.sidebar.markdown(
+        f'<style>div.stButton button[data-baseweb="button"] {{background-color: red; color: white;}}</style>',
+        unsafe_allow_html=True
+    )
+    if st.sidebar.button("Borrar Resultados"):
+        borrar_resultados()

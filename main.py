@@ -63,11 +63,7 @@ def main():
             st.button("Procesar CV",disabled=True)
     else:
         df = pd.read_csv(result_file_path)
-        procesar_df(df)
-
-        # df = pd.read_csv('./cv_data.csv')
-        # procesar_df(df)
-    
+        procesar_df(df)    
 
 if __name__ == "__main__":
     create_directories()

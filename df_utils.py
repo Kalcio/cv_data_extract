@@ -5,10 +5,18 @@ from ast import literal_eval
 from collections import Counter
 from wordcloud import WordCloud
 from io import BytesIO
+from nltk.corpus import stopwords
+from nltk.stem import WordNetLemmatizer
+from sklearn.feature_extraction.text import CountVectorizer
 import plotly.express as px
 import matplotlib.pyplot as plt
 import spacy
 import re
+# Descargar las palabras vacías en español
+import nltk
+
+nltk.download('stopwords')
+nltk.download('wordnet')
 
 def procesar_formato_datos(df):
     # Convertir todas los datos a minúsculas
@@ -41,6 +49,31 @@ def extraer_habilidades_certificados(certificaciones):
                 habilidades_certificados.append(ent.text)
     return habilidades_certificados
 
+def normalizar_palabras(lista_frases):
+    lemmatizer = WordNetLemmatizer()
+    
+    # Aplicar lematización y filtrar palabras con menos de 4 caracteres
+    palabras = [palabra.lower() for frase in lista_frases for palabra in frase.split() if len(palabra) >= 6 and palabra.lower() not in stopwords.words('spanish')]
+    lemas = [lemmatizer.lemmatize(palabra) for palabra in palabras]
+    
+    return ' '.join(lemas)
+
+def extraer_habilidades_blandas(df):
+    # Aplicar la función a la columna 'Texto'
+    df['habilidades_blandas_lematizadas'] = df['habilidades_blandas'].apply(normalizar_palabras)
+
+    # Concatenar todas las habilidades blandas lematizadas en un solo texto
+    text = ' '.join(df['habilidades_blandas_lematizadas'])
+
+    # Crear la nube de palabras
+    wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
+
+    # Mostrar la nube de palabras
+    plt.figure(figsize=(10, 5))
+    plt.imshow(wordcloud, interpolation='bilinear')
+    plt.axis('off')
+    plt.title('Nube de Palabras de Habilidades Blandas')
+    st.pyplot(plt)
 
 def procesar_columnas(df):
     # Columnas a enlistar
@@ -204,7 +237,7 @@ def grafico_certificados(df_filtrado, habilidades_seleccionadas):
         # Mostrar el gráfico interactivo en Streamlit
         st.plotly_chart(fig_certificados)
     else:
-        st.warning("No hay datos para las habilidades seleccionadas")
+        st.warning("No hay certificaciones para las habilidades seleccionadas")
 
 def grafico_radar_skills(df_long):
     # Crea el gráfico interactivo de radar con Plotly Express y asigna un color a cada postulante
@@ -243,9 +276,10 @@ def grafico_experiencia(df):
     st.plotly_chart(fig)
 
 def mostrar_tabla_resultados(df_filtrado):
-    columnas_mostrar = ['nombres', 'telefono', 'email', 'titulo_actual_o_al_egresar', 'universidad_o_instituto','habilidades_tecnicas_unicas','habilidades_blandas','idiomas_que_habla','certificados','URL']
+    columnas_mostrar = ['nombres','universidad_o_instituto','habilidades_tecnicas_unicas','habilidades_blandas','idiomas_que_habla','certificados','URL']
     # Mostrar la tabla con los resultados
-    print_df = df_filtrado[columnas_mostrar].rename(columns={'nombres': 'Nombres', 'telefono': 'Teléfono', 'email': 'Email', 'titulo_actual_o_al_egresar': 'Título','universidad_o_instituto': 'Universidad o Instituto', 'habilidades_tecnicas_unicas': 'Habilidades Técnicas', 'habilidades_blandas': 'Habilidades blandas', 'idiomas_que_habla': 'Idiomas','certificados': 'Certificados','URL':'URL'})
+    # print_df = df_filtrado[columnas_mostrar].rename(columns={'nombres': 'Nombres', 'telefono': 'Teléfono', 'email': 'Email', 'titulo_actual_o_al_egresar': 'Título','universidad_o_instituto': 'Universidad o Instituto', 'habilidades_tecnicas_unicas': 'Habilidades Técnicas', 'habilidades_blandas': 'Habilidades blandas', 'idiomas_que_habla': 'Idiomas','certificados': 'Certificados','URL':'URL'})
+    print_df = df_filtrado[columnas_mostrar].rename(columns={'nombres': 'Nombres', 'titulo_actual_o_al_egresar': 'Título','universidad_o_instituto': 'Universidad o Instituto', 'habilidades_tecnicas_unicas': 'Habilidades Técnicas', 'habilidades_blandas': 'Habilidades blandas', 'idiomas_que_habla': 'Idiomas','certificados': 'Certificados','URL':'URL'})
 
     st.write("Candidatos con habilidades seleccionadas:")
     st.write(print_df)
@@ -264,7 +298,7 @@ def procesar_df(df):
     df['cantidad_experiencia'] = df['cargo_experiencia_laboral'].apply(contar_elementos)
     
     df = calcular_frecuencia(df)
-    st.dataframe(df)
+    # st.dataframe(df)
     col1, col2 = st.columns(2)
 
     selected_skills, selected_languages = obtener_filtros_postulante(df)
@@ -289,5 +323,7 @@ def procesar_df(df):
                 grafico_radar_skills(df_long)
             else:
                 st.warning("Selecciona más 3 habilidades técnicas para mostrar el gráfico de radar.")
+        with st.container():
+            extraer_habilidades_blandas(df)
 
     mostrar_tabla_resultados(filtered_df)

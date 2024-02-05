@@ -1,4 +1,6 @@
 # Trabajo de Titulo
+Sistema que extrae datos de los currículums adjuntados, para generar y visualizar métricas que entreguen un resumen de la información de los postulantes.
+
 Para la instalación de las dependencias, es necesario tener [Anaconda](https://www.anaconda.com/products/individual) instalado.
 
 ## Instalación
